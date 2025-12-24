@@ -1,0 +1,127 @@
+ai-resume-analyzer/
+│
+├── app.py
+├── requirements.txt
+├── README.md
+├── .gitignore
+├── database/
+│   └── jobs.db          # optional, sample database
+├── templates/
+│   └── index.html
+├── static/
+│   └── css/
+│       └── style.css
+└── utils/
+    ├── resume_parser.py
+    └── skill_matcher.py
+from flask import Flask, render_template, request
+from utils.resume_parser import extract_text
+from utils.skill_matcher import match_jobs
+
+app = Flask(__name__)
+
+@app.route("/", methods=["GET", "POST"])
+def index():
+    jobs = []
+    recommendations = []
+    if request.method == "POST":
+        file = request.files.get("resume")
+        if file:
+            text = extract_text(file)
+            jobs, recommendations = match_jobs(text)
+    return render_template("index.html", jobs=jobs, recommendations=recommendations)
+
+if __name__ == "__main__":
+    app.run(debug=True)
+from PyPDF2 import PdfReader
+
+def extract_text(file):
+    """
+    Extracts text from PDF or TXT resume
+    """
+    text = ""
+    if file.filename.endswith(".pdf"):
+        reader = PdfReader(file)
+        for page in reader.pages:
+            text += page.extract_text()
+    else:
+        text = file.read().decode("utf-8")
+    return text
+import spacy
+
+# Load English NLP model
+nlp = spacy.load("en_core_web_sm")
+
+# Skills database
+SKILLS = ["Python", "Java", "SQL", "Flask", "Django", "Machine Learning", "NLP", "JavaScript", "React"]
+
+# Job roles
+JOBS = {
+    "Backend Developer": ["Python", "Flask", "SQL"],
+    "Fullstack Developer": ["Python", "JavaScript", "React", "SQL"],
+    "Data Scientist": ["Python", "Machine Learning", "NLP", "SQL"],
+    "Frontend Developer": ["JavaScript", "React"]
+}
+
+def extract_skills(text):
+    doc = nlp(text)
+    tokens = [token.text for token in doc]
+    found = [skill for skill in SKILLS if skill in tokens]
+    return list(set(found))
+
+def match_jobs(text):
+    skills = extract_skills(text)
+    matched_jobs = []
+    recommendations = []
+
+    for job, req_skills in JOBS.items():
+        score = len(set(skills) & set(req_skills)) / len(req_skills)
+        if score > 0:
+            matched_jobs.append(f"{job} ({score*100:.0f}% match)")
+        missing = set(req_skills) - set(skills)
+        if missing:
+            recommendations.append(f"{job}: Learn {', '.join(missing)}")
+    return matched_jobs, recommendations
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AI Resume Analyzer</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>AI Resume Analyzer & Job Matcher</h1>
+        <form method="POST" enctype="multipart/form-data">
+            <input type="file" name="resume" required>
+            <button type="submit">Analyze</button>
+        </form>
+
+        {% if jobs %}
+        <h2>Matched Jobs:</h2>
+        <ul>
+            {% for job in jobs %}
+                <li>{{ job }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+
+        {% if recommendations %}
+        <h2>Improvement Recommendations:</h2>
+        <ul>
+            {% for rec in recommendations %}
+                <li>{{ rec }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+    </div>
+</body>
+</html>
+body { font-family: Arial, sans-serif; background: #f0f4f7; }
+.container { width: 600px; margin: 50px auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+h1 { text-align: center; }
+form { display: flex; justify-content: center; gap: 10px; margin: 20px 0; }
+button { padding: 8px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+button:hover { background: #0056b3; }
+Flask==2.3.4
+PyPDF2==3.1.1
+spacy==3.6.1
