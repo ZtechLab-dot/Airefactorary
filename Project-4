@@ -1,0 +1,92 @@
+real-time-chat/
+│
+├── server.js
+├── package.json
+├── package-lock.json
+├── README.md
+├── .gitignore
+├── public/
+│   ├── index.html
+│   ├── style.css
+│   └── client.js
+const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
+
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server);
+
+app.use(express.static("public"));
+
+io.on("connection", (socket) => {
+    console.log("A user connected");
+
+    socket.on("chat message", (msg) => {
+        io.emit("chat message", msg);
+    });
+
+    socket.on("disconnect", () => {
+        console.log("User disconnected");
+    });
+});
+
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Real-Time Chat App</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="chat-container">
+    <ul id="messages"></ul>
+    <form id="form" action="">
+        <input id="input" autocomplete="off" placeholder="Type a message..." /><button>Send</button>
+    </form>
+</div>
+<script src="/socket.io/socket.io.js"></script>
+<script src="client.js"></script>
+</body>
+</html>
+body { font-family: Arial, sans-serif; background: #f0f4f7; display: flex; justify-content: center; align-items: center; height: 100vh; }
+.chat-container { width: 500px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+ul { list-style-type: none; padding: 0; max-height: 300px; overflow-y: scroll; }
+li { padding: 5px 10px; margin-bottom: 5px; background: #e0e0e0; border-radius: 5px; }
+form { display: flex; margin-top: 10px; }
+input { flex: 1; padding: 10px; border-radius: 5px; border: 1px solid #ccc; }
+button { padding: 10px; margin-left: 5px; border: none; border-radius: 5px; background: #007bff; color: white; cursor: pointer; }
+button:hover { background: #0056b3; }
+const socket = io();
+const form = document.getElementById("form");
+const input = document.getElementById("input");
+const messages = document.getElementById("messages");
+
+form.addEventListener("submit", function(e){
+    e.preventDefault();
+    if(input.value){
+        socket.emit("chat message", input.value);
+        input.value = "";
+    }
+});
+
+socket.on("chat message", function(msg){
+    const item = document.createElement("li");
+    item.textContent = msg;
+    messages.appendChild(item);
+    messages.scrollTop = messages.scrollHeight;
+});
+{
+  "name": "real-time-chat",
+  "version": "1.0.0",
+  "description": "Real-Time Chat App",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.7.2"
+  }
+}
