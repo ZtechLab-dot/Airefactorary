@@ -1,0 +1,83 @@
+ai-personal-assistant/
+│
+├── main.py
+├── requirements.txt
+├── README.md
+├── .gitignore
+├── utils/
+│   └── assistant_logic.py
+└── icons/
+    └── mic.png
+import tkinter as tk
+from tkinter import messagebox
+from utils.assistant_logic import process_command
+import threading
+
+def run_command():
+    cmd = command_entry.get()
+    output = process_command(cmd)
+    output_text.set(output)
+    command_entry.delete(0, tk.END)
+
+def run_voice_command():
+    import speech_recognition as sr
+    import pyttsx3
+
+    r = sr.Recognizer()
+    mic = sr.Microphone()
+    engine = pyttsx3.init()
+
+    try:
+        with mic as source:
+            r.adjust_for_ambient_noise(source)
+            audio = r.listen(source)
+        text = r.recognize_google(audio)
+        output = process_command(text)
+        output_text.set(output)
+        engine.say(output)
+        engine.runAndWait()
+    except Exception as e:
+        messagebox.showerror("Error", str(e))
+
+app = tk.Tk()
+app.title("AI Personal Assistant")
+app.geometry("500x300")
+
+output_text = tk.StringVar()
+
+tk.Label(app, text="Type your command:").pack(pady=10)
+command_entry = tk.Entry(app, width=50)
+command_entry.pack(pady=5)
+tk.Button(app, text="Run Command", command=run_command).pack(pady=5)
+
+tk.Button(app, text="Voice Command", command=lambda: threading.Thread(target=run_voice_command).start()).pack(pady=10)
+tk.Label(app, textvariable=output_text, wraplength=400).pack(pady=20)
+
+app.mainloop()
+import os
+import datetime
+import webbrowser
+
+def process_command(command):
+    command = command.lower()
+
+    if "open notepad" in command:
+        os.system("notepad")
+        return "Opening Notepad"
+    elif "time" in command:
+        now = datetime.datetime.now()
+        return f"Current time is {now.strftime('%H:%M:%S')}"
+    elif "date" in command:
+        today = datetime.date.today()
+        return f"Today's date is {today.strftime('%B %d, %Y')}"
+    elif "open youtube" in command:
+        webbrowser.open("https://www.youtube.com")
+        return "Opening YouTube"
+    elif "hello" in command or "hi" in command:
+        return "Hello! How can I help you?"
+    else:
+        return "Sorry, I can't do that yet."
+tkinter
+SpeechRecognition
+pyttsx3
+pyaudio
